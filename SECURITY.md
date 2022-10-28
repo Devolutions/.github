@@ -3,4 +3,4 @@
 ## Reporting a Vulnerability
 
 Please report any security issue to security@devolutions.net. You can find more details
-about our security policy on https://devolutions.net/legal/security.
+about our security policy on https://devolutions.net/security/report-issue.
