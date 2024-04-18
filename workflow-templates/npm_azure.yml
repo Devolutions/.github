@@ -1,0 +1,177 @@
+name: shared build & deploy workflow
+
+####################################################
+# EXAMPLE OF A WORKFLOW THAT WILL CALL THIS TEMPLATE
+####################################################
+# name: staging
+# run-name: <project> [staging] - ${{ inputs.ref != '' && inputs.ref || github.ref_name }}
+#
+# on:
+#   push:
+#     branches: master
+#   workflow_dispatch:
+#     inputs:
+#       ref:
+#         default: master
+#         description: Commit SHA / branch to deploy
+#         required: true
+#
+# concurrency: staging
+#
+# jobs:
+#   staging:
+#     secrets: inherit
+#     uses: ./.github/workflows/shared.yml
+#     with:
+#       deploy: true
+#       environment: staging
+#       ref: ${{ inputs.ref }}
+#       subscription_id: <subscription_id> # <Azure Subscription Name>
+####################################################
+
+on:
+  workflow_call:
+    inputs:
+      deploy:
+        default: false
+        required: false
+        type: boolean
+      environment:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
+      subscription_id:
+        required: true
+        type: string
+
+jobs:
+  ###################
+  # [CI] BUILD
+  ###################
+  # This job should only serve to build and test the code
+  # It should not require environment secrets
+  # Other steps could be required to build the application
+  build:
+    runs-on: ubuntu-22.04
+    outputs:
+      commit_sha: ${{ steps.set-output.outputs.commit_sha }}
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set outputs
+        id: set-output
+        run: echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Setup .npmrc config file
+        uses: devolutions/actions/npmrc-setup@v1
+        with:
+          npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload build artifact
+        if: ${{ inputs.deploy }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist
+
+  ###################
+  # [CD] DEPLOY
+  ###################
+  # This job needs a client id that has access to the azure app service (federated credential)
+  # and a tailscale auth key to be able to deploy to the app service
+  deploy:
+    environment: ${{ inputs.environment }}
+    if: ${{ inputs.deploy }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+
+      - name: Packaging build before deploying to app service
+        run: |
+          cd build
+          zip -r ../build.zip \.* *
+
+      - name: Install toolbox
+        uses: devolutions/actions/toolbox-install@v1
+        with:
+          github_token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ inputs.subscription_id }}
+
+      - name: Connect to Tailscale
+        uses: devolutions/actions/tailscale@v1
+        with:
+          auth_key: ${{ secrets.TAILSCALE_AUTH_KEY_EPHEMERAL }}
+
+      - name: Apply configuration to app service preview slot
+        run: dv config apply -f ci/${{ inputs.environment }}.dv.yml
+
+      - name: Deploy to app service preview slot
+        run: dv azure webapp deploy --zip-file build.zip -f ci/${{ inputs.environment }}.dv.yml
+
+      - name: Swap slots
+        run: dv azure webapp swap -f ci/${{ inputs.environment }}.dv.yml
+
+  ###################
+  # REPORT [OPTIONAL]
+  ###################
+  # This job can report the deployment in a repository variable
+  # It can also be used to send notifications to slack or other services
+  # It needs a github write token in the environment report to be able to write to the repository
+  report:
+    concurrency: ${{ inputs.environment}}
+    environment: report
+    if: ${{ inputs.deploy }}
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install toolbox
+        uses: devolutions/actions/toolbox-install@v1
+        with:
+          github_token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+
+      - name: Save deployment
+        run: dv github deployments set -r <project_name> -e "${{ inputs.environment }}" -c "${{ needs.build.outputs.commit_sha }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEVOLUTIONSBOT_WRITE_TOKEN }}
+
+      - name: Deployed commit ${{ needs.build.outputs.commit_sha }}
+        run: echo "commit deployed -> ${{ needs.build.outputs.commit_sha }}"

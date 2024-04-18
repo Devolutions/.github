@@ -1,0 +1,256 @@
+name: shared build & deploy workflow
+
+####################################################
+# EXAMPLE OF A WORKFLOW THAT WILL CALL THIS TEMPLATE
+####################################################
+# name: staging
+# run-name: <project> [staging] - ${{ inputs.ref != '' && inputs.ref || github.ref_name }}
+#
+# on:
+#   push:
+#     branches: master
+#   workflow_dispatch:
+#     inputs:
+#       ref:
+#         default: master
+#         description: Commit SHA / branch to deploy
+#         required: true
+#       deploy_only:
+#         default: false
+#         description: Deploy k8s manifests only, skip build
+#         required: false
+#         type: boolean
+#
+# jobs:
+#   staging:
+#     secrets: inherit
+#     uses: ./.github/workflows/shared.yml
+#     with:
+#       cluster: staging
+#       deploy_only: ${{ inputs.deploy_only == '' && 'false' || inputs.deploy_only }}
+#       environment: staging
+#       ref: ${{ inputs.ref }}
+#       subscription_id: <subscription_id> # <Azure Subscription Name>
+####################################################
+
+on:
+  workflow_call:
+    inputs:
+      cluster:
+        required: true
+        type: string
+      deploy_only:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
+      subscription_id:
+        required: true
+        type: string
+
+jobs:
+  ###################
+  # SETUP
+  ###################
+  # This job serves to setup the subsequent jobs to avoid duplicated steps
+  # It should not require environment secrets
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.variables.outputs.commit_sha }}
+      tag: ${{ steps.variables.outputs.tag }}
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set variables
+        id: variables
+        run: |
+          TAG="latest"
+          if [[ "${{ inputs.environment }}" == "production" ]]
+          then
+            TAG="$(git rev-parse --short HEAD)"
+          fi
+          echo "Image tag set to $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Archive dockerfile
+        if: ${{ inputs.deploy_only == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dockerfile
+          path: |
+            Dockerfile.GH
+
+      - name: Archive host artifacts
+        if: ${{ inputs.deploy_only == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nginx
+          path: |
+            nginx/default.conf
+
+  ###################
+  # [CI] BUILD
+  ###################
+  # This job should only serve to build and test the code
+  # It should not require environment secrets
+  # Other steps could be required to build the application
+  build:
+    if: ${{ inputs.deploy_only == 'false' }}
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set outputs
+        id: set-output
+        run: echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Setup .npmrc config file
+        uses: devolutions/actions/npmrc-setup@v1
+        with:
+          npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload build artifact
+        if: ${{ inputs.deploy }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist
+
+  ###################
+  # [CI] PUSH IMAGE
+  ###################
+  # This job should only serve to build and push the docker image resulting from the build
+  # It needs the docker hub access token to push the image
+  build-image:
+    runs-on: ubuntu-latest
+    environment: build
+    needs: [setup, build]
+    if: ${{ inputs.deploy_only == 'false' }}
+
+    steps:
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: devolutionsbot
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: dockerfile/Dockerfile.GH
+          labels: |
+            commitid=${{ github.sha }}
+          push: true
+          tags: |
+            devolutions/<app_name>:${{ needs.configs.outputs.tag }}
+
+  ###################
+  # [CD] DEPLOY
+  ###################
+  # This job needs a client id that has access to the Kubernetes cluster namespace (federated credential)
+  # and a tailscale auth key to be able to deploy to the app service
+  deploy:
+    concurrency: <app_name>_${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
+    if: ${{ !cancelled() && !failure() }} # required if the job build-image is skipped
+    needs: [setup, build-image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out k8s-as-code
+        uses: actions/checkout@v4
+        with:
+          repository: Devolutions/k8s-as-code
+          token: ${{ secrets.DEVOLUTIONSBOT_WRITE_TOKEN }}
+
+      - name: Install toolbox
+        uses: devolutions/actions/toolbox-install@v1
+        with:
+          github_token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ inputs.subscription_id }}
+
+      - name: Connect to Tailscale
+        uses: devolutions/actions/tailscale@v1
+        with:
+          auth_key: ${{ secrets.TAILSCALE_AUTH_KEY_EPHEMERAL }}
+
+      - name: Authenticate to cluster
+        uses: devolutions/actions/k8s-authenticate@v1
+        with:
+          cluster: ${{ inputs.cluster }}
+          subscription_id: ${{ inputs.subscription_id }}
+
+      - name: Deploy with kustomize
+        uses: devolutions/actions/k8s-kustomize-deploy@v1
+        with:
+          cluster: ${{ inputs.cluster }}
+          environment: ${{ inputs.environment }}
+          image: devolutions/<app_name>:${{ needs.configs.outputs.tag }}
+          namespace: <namespace>
+          manifest_path: apps/<namespace>/manifests/<app_name>
+
+  ###################
+  # REPORT [OPTIONAL]
+  ###################
+  # This job can report the deployment in a repository variable
+  # It can also be used to send notifications to slack or other services
+  # It needs a github write token in the environment report to be able to write to the repository
+  report:
+    concurrency: ${{ inputs.environment}}
+    environment: report
+    if: ${{ inputs.deploy }}
+    needs: [setup, deploy]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install toolbox
+        uses: devolutions/actions/toolbox-install@v1
+        with:
+          github_token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+
+      - name: Save deployment
+        run: dv github deployments set -r <project_name> -e "${{ inputs.environment }}" -c "${{ needs.setup.outputs.commit_sha }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEVOLUTIONSBOT_WRITE_TOKEN }}
+
+      - name: Deployed commit ${{ needs.setup.outputs.commit_sha }}
+        run: echo "commit deployed -> ${{ needs.setup.outputs.commit_sha }}"
