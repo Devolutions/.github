@@ -3,14 +3,10 @@
     "description": "Shared workflow for NPM projects deployed on Kubernetes.",
     "iconName": "octicon rocket",
     "categories": [
-        "angular",
         "continuous-integration",
         "deployment",
+        "Angular",
         "npm",
-        "kubernetes"
-    ],
-    "filePatterns": [
-        "angular.json",
-        "package.json"
+        "Yarn"
     ]
 }

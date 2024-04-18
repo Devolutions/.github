@@ -3,14 +3,10 @@
     "description": "Shared workflow for NPM projects deployed on Azure App Service.",
     "iconName": "octicon rocket",
     "categories": [
-        "angular",
         "continuous-integration",
         "deployment",
+        "Angular",
         "npm",
-        "app-service"
-    ],
-    "filePatterns": [
-        "angular.json",
-        "package.json"
+        "Yarn"
     ]
 }
