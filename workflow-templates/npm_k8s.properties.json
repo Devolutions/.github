@@ -1,7 +1,7 @@
 {
-    "name": "CI/CD NPM Project [Kubernetes]",
+    "name": "[Kubernetes] NPM",
     "description": "Shared workflow for NPM projects deployed on Kubernetes.",
-    "iconName": "rocket",
+    "iconName": "octicon rocket",
     "categories": [
         "angular",
         "continuous-integration",
