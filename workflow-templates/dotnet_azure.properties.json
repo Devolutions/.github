@@ -1,0 +1,10 @@
+{
+    "name": "[Azure] .Net",
+    "description": "Shared workflow for .Net projects deployed on Azure App Service.",
+    "iconName": "octicon rocket",
+    "categories": [
+        "continuous-integration",
+        "deployment",
+        "AspNetCore"
+    ]
+}

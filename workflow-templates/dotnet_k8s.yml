@@ -118,23 +118,30 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: Configure .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          # dotnet-version: '8.0.x' # prefer using the global.json file
+          global-json-file: path/to/global.json # update with the valid path to the global.json file (https://learn.microsoft.com/en-us/dotnet/core/tools/global-json)
+
+      - name: Authenticate with Artifactory
+        uses: devolutions/actions/nuget-artifactory-setup@v1
+        with:
+          artifactory_username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          artifactory_password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Setup .npmrc config file
-        uses: devolutions/actions/npmrc-setup@v1
-        with:
-          npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+            ${{ runner.os }}-nuget-
 
       - name: Build
         run: |
-          npm ci
-          npm run build
+          dotnet restore
+          dotnet publish --configuration Release --output dist --no-restore # (https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-publish)
 
       - name: Upload build artifact
         if: ${{ inputs.deploy }}

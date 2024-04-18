@@ -1,0 +1,10 @@
+{
+    "name": "[Kubernetes] .Net",
+    "description": "Shared workflow for .Net projects deployed on Kubernetes.",
+    "iconName": "octicon rocket",
+    "categories": [
+        "continuous-integration",
+        "deployment",
+        "AspNetCore"
+    ]
+}
