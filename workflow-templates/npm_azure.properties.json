@@ -1,0 +1,16 @@
+{
+    "name": "CI/CD NPM Project [Azure]",
+    "description": "Shared workflow for NPM projects deployed on Azure App Service.",
+    "iconName": "rocket",
+    "categories": [
+        "angular",
+        "continuous-integration",
+        "deployment",
+        "npm",
+        "app-service"
+    ],
+    "filePatterns": [
+        "angular.json",
+        "package.json"
+    ]
+}
