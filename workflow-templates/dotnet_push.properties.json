@@ -1,0 +1,10 @@
+{
+    "name": "[Push] Nuget Package",
+    "description": "Workflow for pushing nuget packages to Artifactory.",
+    "iconName": "octicon repo-push",
+    "categories": [
+        "continuous-integration",
+        "dependency-management",
+        "AspNetCore"
+    ]
+}
