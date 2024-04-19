@@ -1,0 +1,10 @@
+{
+    "name": "[Push] NPM Package",
+    "description": "Workflow for pushing npm packages to Artifactory.",
+    "iconName": "octicon repo-push",
+    "categories": [
+        "continuous-integration",
+        "dependency-management",
+        "npm"
+    ]
+}
