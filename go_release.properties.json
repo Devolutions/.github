@@ -1,0 +1,10 @@
+{
+    "name": "[Release] Go",
+    "description": "Workflow for releasing go projects.",
+    "iconName": "octicon rocket",
+    "categories": [
+        "continuous-integration",
+        "deployment",
+        "Go"
+    ]
+}

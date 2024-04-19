@@ -1,0 +1,71 @@
+name: testing
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    environment: test-application
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+
+      - name: Get current version
+        id: get-version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Does tag exists?
+        uses: devolutions/actions/tag-check@v1
+        with:
+          github_token: ${{ github.token }}
+          tag: v${{ steps.get-version.outputs.version }}
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ vars.GO_VERSION }}
+
+      # Optional: if tests needs to reach our internal services
+      - name: Connect to Tailscale
+        uses: devolutions/actions/tailscale@v1
+        with:
+          auth_key: ${{ secrets.TAILSCALE_AUTH_KEY_EPHEMERAL }}
+
+      # Optional: if tests needs to reach our internal services
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: <subscription_id> # Subscription Name
+
+      # Optional: if tests needs to reach our internal services
+      - name: Authenticate to cluster
+        uses: devolutions/actions/k8s-authenticate@v1
+        with:
+            cluster: <cluster_name>
+            subscription_id: <subscription_id> # Subscription Name
+
+      # Environment variables could vary depending on the testing scopes
+      - name: Test application
+        uses: devolutions/actions/go-test@v1
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GH_INFRA_ADMIN_PAT }}
+          GOPRIVATE: github.com/Devolutions
+          KUBECONFIG: /home/runner/.kube/config
+        with:
+          github_token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}

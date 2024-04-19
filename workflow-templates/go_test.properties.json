@@ -1,0 +1,10 @@
+{
+    "name": "[Test] Go",
+    "description": "Workflow for testing go projects.",
+    "iconName": "octicon bug",
+    "categories": [
+        "continuous-integration",
+        "testing",
+        "Go"
+    ]
+}
