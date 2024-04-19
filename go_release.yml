@@ -1,0 +1,27 @@
+name: release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - VERSION # only if the VERSION has been bumped
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: get-version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        uses: devolutions/actions/create-release@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.get-version.outputs.version }}
