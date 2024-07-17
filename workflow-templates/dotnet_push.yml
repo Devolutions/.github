@@ -1,8 +1,6 @@
 name: push package
 
 on:
-  release:
-    types: published
   workflow_dispatch:
     inputs:
       publish: # for dry-run if set to false
@@ -39,10 +37,10 @@ jobs:
         uses: devolutions/actions/dotnet-pack@v1
         with:
           output_path: release
-          version: ${{ github.event_name == 'release' && github.ref_name || inputs.version }}
+          version: ${{ inputs.version }}
 
       - name: Push
-        if: ${{ github.event_name == 'release' && true || inputs.publish }}
+        if: ${{ inputs.publish }}
         uses: devolutions/actions/dotnet-push@v1
         with:
           working_directory: release
