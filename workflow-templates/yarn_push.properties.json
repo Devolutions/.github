@@ -1,0 +1,10 @@
+{
+    "name": "[Push] Yarn Package",
+    "description": "Workflow for pushing Yarn packages to Artifactory.",
+    "iconName": "octicon repo-push",
+    "categories": [
+        "continuous-integration",
+        "dependency-management",
+        "yarn"
+    ]
+}
