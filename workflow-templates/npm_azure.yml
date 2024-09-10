@@ -88,13 +88,13 @@ jobs:
 
       - name: Upload build artifact
         if: ${{ inputs.deploy }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.6
         with:
           name: build
           path: dist
 
       - name: Upload configurations artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.6
         if: ${{ inputs.deploy }}
         with:
           name: ci
