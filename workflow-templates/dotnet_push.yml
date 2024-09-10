@@ -46,6 +46,6 @@ jobs:
           working_directory: release
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.6
         with:
           path: release
