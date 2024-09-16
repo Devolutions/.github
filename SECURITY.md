@@ -1,6 +1,3 @@
-# Security Policy
+# Security policy
 
-## Reporting a Vulnerability
-
-Please report any security issue to security@devolutions.net. You can find more details
-about our security policy on https://devolutions.net/security/report-issue.
+[Report any security issue](https://devolutions.net/security/report-issue) to security@devolutions.net.
