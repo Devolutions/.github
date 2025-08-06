@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x # depends on the project
+          node-version: 24.x # depends on the project
 
       - name: Setup .npmrc
         uses: devolutions/actions/npmrc-setup@v1
@@ -42,9 +42,10 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      # this step could vary depending on the project
       - name: Build
         if: ${{ !inputs.publish }}
-        run: |  # this step could vary depending on the project
+        run: |  
           yarn run build @devolutions/ngx-components
 
       - name: Setup .npmrc local
@@ -54,9 +55,10 @@ jobs:
           npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
           repository: npm-local
 
+      # this step could vary depending on the project
       - name: Push
         if : ${{ inputs.publish }}
-        run: |  # this step could vary depending on the project
+        run: | 
           yarn run publish-local
 
       - uses: actions/upload-artifact@v4.3.6
