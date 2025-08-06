@@ -54,7 +54,7 @@ jobs:
   # It should not require environment secrets
   # Other steps could be required to build the application
   build:
-    runs-on: windows-2022
+    runs-on: windows-2025
     outputs:
       commit_sha: ${{ steps.set-output.outputs.commit_sha }}
 
