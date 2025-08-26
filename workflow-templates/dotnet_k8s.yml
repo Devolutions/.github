@@ -231,7 +231,7 @@ jobs:
         with:
           cluster: ${{ inputs.cluster }}
           environment: ${{ inputs.environment }}
-          image: devolutions/<app_name>:${{ needs.configs.outputs.tag }}
+          image: devolutions/<app_name>:${{ needs.setup.outputs.tag }}
           namespace: <namespace>
           manifest_path: apps/<namespace>/manifests/<app_name>
 
