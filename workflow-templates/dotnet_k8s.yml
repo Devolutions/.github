@@ -180,7 +180,7 @@ jobs:
             commitid=${{ github.sha }}
           push: true
           tags: |
-            devolutions/<app_name>:${{ needs.configs.outputs.tag }}
+            devolutions/<app_name>:${{ needs.setup.outputs.tag }}
 
   ###################
   # [CD] DEPLOY
