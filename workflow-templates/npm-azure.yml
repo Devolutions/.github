@@ -54,7 +54,7 @@ jobs:
   # It should not require environment secrets
   # Other steps could be required to build the application
   build:
-    runs-on: windows-2025
+    runs-on: ubuntu-22.04
     outputs:
       commit_sha: ${{ steps.set-output.outputs.commit_sha }}
 
@@ -64,30 +64,27 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Configure .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          # dotnet-version: '8.0.x' # prefer using the global.json file
-          global-json-file: path/to/global.json # update with the valid path to the global.json file (https://learn.microsoft.com/en-us/dotnet/core/tools/global-json)
-
-      - name: Authenticate with Artifactory
-        uses: devolutions/actions/nuget-artifactory-setup@v1
-        with:
-          artifactory_username: ${{ secrets.ARTIFACTORY_USERNAME }}
-          artifactory_password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+      - name: Set outputs
+        id: set-output
+        run: echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-nuget-
+            ${{ runner.os }}-node-
+
+      - name: Setup .npmrc config file
+        uses: devolutions/actions/npmrc-setup@v1
+        with:
+          npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
 
       - name: Build
         run: |
-          dotnet restore
-          dotnet publish --configuration Release --output dist --no-restore # (https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-publish)
+          npm ci
+          npm run build
 
       - name: Upload build artifact
         if: ${{ inputs.deploy }}
@@ -97,11 +94,12 @@ jobs:
           path: dist
 
       - name: Upload configurations artifact
-        uses: actions/upload-artifact@v4.3.6
         if: ${{ inputs.deploy }}
+        uses: actions/upload-artifact@v4.3.6
         with:
           name: ci
           path: ci
+
 
   ###################
   # [CD] DEPLOY

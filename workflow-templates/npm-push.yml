@@ -58,7 +58,7 @@ jobs:
 
       # this step could vary depending on the project
       - name: Push
-        if : ${{ github.event.inputs.publish != 'false' }}
+        if: ${{ github.event.inputs.publish != 'false' }}
         run: |
           npm run publish:jfrog
 
