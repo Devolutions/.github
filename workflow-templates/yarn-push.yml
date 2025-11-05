@@ -57,8 +57,8 @@ jobs:
 
       # this step could vary depending on the project
       - name: Push
-        if : ${{ inputs.publish }}
-        run: | 
+        if: ${{ inputs.publish }}
+        run: |
           yarn run publish-local
 
       - uses: actions/upload-artifact@v4.3.6

@@ -150,9 +150,9 @@ jobs:
   # It needs the docker hub access token to push the image
   build-image:
     environment: build
-    needs: [setup, build]
     if: ${{ !inputs.skip_build }}
-    runs-on: ubuntu-latest
+    needs: [setup, build]
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Download all workflow run artifacts
@@ -236,8 +236,8 @@ jobs:
   # It needs a github write token in the environment report to be able to write to the repository
   report:
     concurrency: ${{ inputs.environment}}
-    if: ${{ inputs.deploy }}
     environment: report
+    if: ${{ inputs.deploy }}
     needs: [setup, deploy]
     runs-on: ubuntu-latest
 
