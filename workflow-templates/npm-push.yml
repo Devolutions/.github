@@ -18,6 +18,10 @@ jobs:
   push:
     environment: publish
     runs-on: ubuntu-22.04
+    # Required for Option 2 (npmjs.com with Trusted Publishing)
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Check out repository
@@ -28,15 +32,16 @@ jobs:
         with:
           node-version: 24.x # depends on the project
 
-      # If push to Artifactory
+      # Option 1: Setup for Artifactory (private repos)
       - name: Setup .npmrc
         uses: devolutions/actions/npmrc-setup@v1
         with:
           npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
 
-      # If push to NPMJS
-      - name: Setup .npmrc
-        run: npm set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+      # Option 2: For npmjs.com (public repos) using Trusted Publishing (OIDC)
+      # No explicit setup step needed - npm uses OIDC automatically when id-token: write is present
+      # Note: First publish must be done manually by DevOps to configure the trusted publisher
+      # Documentation: https://docs.npmjs.com/trusted-publishers
 
       - name: Get npm cache directory
         id: npm-cache-dir
@@ -56,11 +61,16 @@ jobs:
           npm ci
           npm run build
 
-      # this step could vary depending on the project
+      # Option 1: Publish to Artifactory (private repos)
       - name: Push
         if: ${{ github.event.inputs.publish != 'false' }}
         run: |
           npm run publish:jfrog
+
+      # Option 2: Publish to npmjs.com (public repos)
+      - name: Push
+        if: ${{ github.event.inputs.publish != 'false' }}
+        run: npm publish
 
       # this step could vary depending on the project
       - uses: actions/upload-artifact@v4.3.6
@@ -68,8 +78,8 @@ jobs:
           name: package
           path: dist/*
 
-      # If push to NPMJS
+      # Option 2 only: Update Artifactory cache after npmjs.com publish
       - name: Update Artifactory Cache
-        run: gh workflow run update-artifactory-cache.yml --repo Devolutions/scheduled-tasks --field package_name="slauth"
+        run: gh workflow run update-artifactory-cache.yml --repo Devolutions/scheduled-tasks --field package_name="<package-name>"
         env:
           GH_TOKEN: ${{ secrets.DEVOLUTIONSBOT_WRITE_TOKEN }}
