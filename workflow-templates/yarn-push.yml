@@ -13,6 +13,10 @@ jobs:
   push:
     environment: publish
     runs-on: ubuntu-22.04
+    # Required for Option 2 (npmjs.com with Trusted Publishing)
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Check out repository
@@ -23,10 +27,16 @@ jobs:
         with:
           node-version: 24.x # depends on the project
 
+      # Option 1: Setup for Artifactory (private repos)
       - name: Setup .npmrc
         uses: devolutions/actions/npmrc-setup@v1
         with:
           npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+
+      # Option 2: For npmjs.com (public repos) using Trusted Publishing (OIDC)
+      # No explicit setup step needed - npm/yarn uses OIDC automatically when id-token: write is present
+      # Note: First publish must be done manually by DevOps to configure the trusted publisher
+      # Documentation: https://docs.npmjs.com/trusted-publishers
 
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
@@ -55,11 +65,16 @@ jobs:
           npm_token: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
           repository: npm-local
 
-      # this step could vary depending on the project
+      # Option 1: Publish to Artifactory (private repos)
       - name: Push
         if: ${{ inputs.publish }}
         run: |
           yarn run publish-local
+
+      # Option 2: Publish to npmjs.com (public repos)
+      - name: Push
+        if: ${{ inputs.publish }}
+        run: yarn publish --tag latest
 
       - uses: actions/upload-artifact@v4.3.6
         with:

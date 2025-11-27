@@ -18,16 +18,29 @@ jobs:
   push:
     environment: publish
     runs-on: windows-2022
+    # Required for Option 2 (nuget.org with Trusted Publishing)
+    permissions:
+      id-token: write
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # Option 1: Setup for Artifactory (private repos)
       - name: Setup Artifactory
         uses: devolutions/actions/nuget-artifactory-setup@v1
         with:
           artifactory_password: ${{ secrets.ARTIFACTORY_PASSWORD }}
           artifactory_username: ${{ secrets.ARTIFACTORY_USERNAME }}
+
+      # Option 2: Setup for nuget.org (public repos) using Trusted Publishing (OIDC)
+      # Note: First publish must be done manually by DevOps to configure the trusted publisher
+      # Documentation: https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing
+      - name: NuGet login (OIDC)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_BOT_USERNAME }}
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -43,11 +56,21 @@ jobs:
           output_path: release
           version: ${{ inputs.version }}
 
+      # Option 1: Publish to Artifactory (private repos)
       - name: Push
         if: ${{ inputs.publish }}
         uses: devolutions/actions/dotnet-push@v1
         with:
           working_directory: release
+
+      # Option 2: Publish to nuget.org (public repos)
+      - name: Push
+        if: ${{ inputs.publish }}
+        run: dotnet nuget push release/*.nupkg --api-key $NUGET_API_KEY --source $NUGET_SOURCE --skip-duplicate
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4.3.6
