@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Check out ${{ github.repository }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Get current version
         id: get-version
@@ -33,7 +33,7 @@ jobs:
           tag: v${{ steps.get-version.outputs.version }}
 
       - name: Setup Go environment
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ vars.GO_VERSION }}
 

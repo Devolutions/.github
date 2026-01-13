@@ -61,14 +61,14 @@ jobs:
 
     steps:
       - name: Check out ${{ github.repository }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
 
       - name: Configure .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          # dotnet-version: '8.0.x' # prefer using the global.json file
+          # dotnet-version: 10.0.x # prefer using the global.json file
           global-json-file: path/to/global.json # update with the valid path to the global.json file (https://learn.microsoft.com/en-us/dotnet/core/tools/global-json)
 
       - name: Authenticate with Artifactory
@@ -78,7 +78,7 @@ jobs:
           artifactory_password: ${{ secrets.ARTIFACTORY_PASSWORD }}
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -92,14 +92,14 @@ jobs:
 
       - name: Upload build artifact
         if: ${{ inputs.deploy }}
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v6
         with:
           name: build
           path: dist
 
       - name: Upload configurations artifact
         if: ${{ inputs.deploy }}
-        uses: actions/upload-artifact@v4.3.6
+        uses: actions/upload-artifact@v6
         with:
           name: ci
           path: ci
@@ -120,13 +120,13 @@ jobs:
 
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: build
           path: build
 
       - name: Download configurations artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ci
           path: ci
