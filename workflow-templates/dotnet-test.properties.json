@@ -1,0 +1,10 @@
+{
+    "name": "[Test] .NET",
+    "description": "Workflow for testing .NET projects.",
+    "iconName": "octicon bug",
+    "categories": [
+        "continuous-integration",
+        "testing",
+        "AspNetCore"
+    ]
+}
