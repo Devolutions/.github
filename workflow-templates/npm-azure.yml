@@ -105,7 +105,6 @@ jobs:
   # [CD] DEPLOY
   ###################
   # This job needs a client id that has access to the azure app service (federated credential)
-  # and a tailscale auth key to be able to deploy to the app service
   deploy:
     environment: ${{ inputs.environment }}
     if: ${{ inputs.deploy }}
@@ -145,9 +144,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Connect to Tailscale
-        uses: devolutions/actions/tailscale@v1
-        with:
-          auth_key: ${{ secrets.TAILSCALE_AUTH_KEY_EPHEMERAL }}
+        uses: devolutions/actions/tailscale@v2
 
       - name: Apply configuration to app service preview slot
         run: dv config apply -f ci/${{ inputs.environment }}.dv.yml
