@@ -189,7 +189,6 @@ jobs:
   # [CD] DEPLOY
   ###################
   # This job needs a client id that has access to the Kubernetes cluster namespace (federated credential)
-  # and a tailscale auth key to be able to deploy to the app service
   deploy:
     concurrency: <app_name>_${{ inputs.environment }}
     environment: ${{ inputs.environment }}
@@ -220,9 +219,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Connect to Tailscale
-        uses: devolutions/actions/tailscale@v1
-        with:
-          auth_key: ${{ secrets.TAILSCALE_AUTH_KEY_EPHEMERAL }}
+        uses: devolutions/actions/tailscale@v2
 
       - name: Authenticate to cluster
         uses: devolutions/actions/k8s-authenticate@v1

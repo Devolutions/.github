@@ -39,9 +39,7 @@ jobs:
 
       # Optional: if tests needs to reach our internal services
       - name: Connect to Tailscale
-        uses: devolutions/actions/tailscale@v1
-        with:
-          auth_key: ${{ secrets.TAILSCALE_AUTH_KEY_EPHEMERAL }}
+        uses: devolutions/actions/tailscale@v2
 
       # Optional: if tests needs to reach our internal services
       - uses: azure/login@v2
