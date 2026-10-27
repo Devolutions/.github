@@ -7,7 +7,7 @@ about our security policy on https://devolutions.net/security/.
 
 ## Open-Source Projects
 
-Do not open a public issue or pull request for a vulnerability before we reply. After triage, we let you know how the fix will be handled:
+Please wait for our reply before opening a public issue or pull request for a vulnerability. After triage, we let you know how the fix will be handled:
 
 - Low-impact issues (crashes, panics, denial of service) are fixed through regular public pull requests with neutral commit messages.
 - Higher-impact issues are fixed privately by the maintainers.
